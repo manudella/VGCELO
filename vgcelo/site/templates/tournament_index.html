@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% import "macros.html" as m %}
+{% block title %}Tournaments · {{ site.title }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb"><a href="{{ url('index.html') }}">Home</a> / Tournaments</div>
+<h1>Majors</h1>
+<p class="muted">Every Regional Championship and above since the 2023 season.</p>
+
+<div class="filter-bar">
+  <label>Regulation
+    <select id="tourn-reg-filter">
+      <option value="">All regulations</option>
+      {% for r in regulations %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+    </select>
+  </label>
+  <span id="tourn-count" class="muted small"></span>
+</div>
+
+<div id="tourn-list">
+{% for season in seasons|reverse %}
+<section class="section tourn-season" data-season="{{ season }}">
+  <h2>Season {{ season }}</h2>
+  <div class="grid cols-2">
+    {% for t in tournaments if t.season == season %}
+    <a class="card tourn-card" data-reg="{{ t.regulation }}"
+       href="{{ url('tournament/' ~ t.id ~ '.html') }}">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <strong>{{ t.name }}</strong> {{ m.tier_tag(t.tier) }}
+      </div>
+      <div class="muted small">{{ t.start_date }}{% if t.location %} · {{ t.location }}{% endif %}
+        {% if t.regulation %}· {{ t.regulation }}{% endif %}
+        {% if t.attendance %}· {{ t.attendance }} players{% endif %}</div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+</div>
+{% endblock %}

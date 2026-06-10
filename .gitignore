@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Data & build artifacts
+data/cache/
+dist/
+*.log
+
+# Keep the database and the official-artwork cache OUT of git by default.
+# (The GitHub Action regenerates them. Comment these out if you prefer to
+#  commit the DB so history is preserved across runs.)
+data/vgcelo.sqlite3
+vgcelo/site/static/pokemon/*.png
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude local settings
+.claude/

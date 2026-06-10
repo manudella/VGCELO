@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% import "macros.html" as m %}
+{% block title %}{{ mon.species }} · {{ site.title }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb"><a href="{{ url('index.html') }}">Home</a> /
+  <a href="{{ url('pokemon.html') }}">Pokémon</a> / {{ mon.species }}</div>
+
+<div class="card">
+  <div class="profile-head">
+    {{ m.poke_img(mon.image, mon.species, 'lg') }}
+    <div>
+      <h1 style="margin-bottom:.3em">{{ mon.species }}</h1>
+      <div class="filter-bar" style="margin:0 0 10px">
+        <label>Regulation
+          <select id="mon-reg">
+            <option value="all">All regulations</option>
+            {% for r in mon.regs_present %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+          </select>
+        </label>
+      </div>
+      <div class="chips" id="mon-chips"></div>
+    </div>
+  </div>
+</div>
+
+<section class="section">
+  <h2>Sets</h2>
+  <div class="grid cols-2" id="mon-sets"></div>
+</section>
+
+<section class="section">
+  <h2>Best players <span class="muted small">— most wins with {{ mon.species }}</span></h2>
+  <div class="card">
+    <table class="table"><tbody id="mon-top"></tbody></table>
+  </div>
+</section>
+
+<script>
+  window.MON = {{ mon.by_reg | tojson }};
+</script>
+{% endblock %}

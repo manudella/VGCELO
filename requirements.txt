@@ -1,0 +1,7 @@
+# Core
+requests>=2.31
+beautifulsoup4>=4.12
+lxml>=4.9
+Jinja2>=3.1
+PyYAML>=6.0
+python-dateutil>=2.8

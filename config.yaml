@@ -1,0 +1,91 @@
+# =============================================================================
+# VGC Elo — configuration
+# =============================================================================
+# Everything that tunes the pipeline lives here so you never have to touch code
+# to change a season window, the Elo K-factor, or which tournament tiers count.
+
+site:
+  title: "VGC Elo"
+  tagline: "Competitive Pokémon VGC ratings from RK9 majors"
+  # Base URL the site is served from. For GitHub Pages project sites this is
+  # "/<repo-name>"; for a custom domain / user site use "".
+  base_url: "/VGCELO"
+  author: "Manuel"
+
+data:
+  db_path: "data/vgcelo.sqlite3"
+  cache_dir: "data/cache"        # raw RK9 HTML is cached here (polite scraping)
+  output_dir: "dist"             # generated static site
+  images_dir: "vgcelo/site/static/pokemon"
+
+scrape:
+  # Data source. "pokedata" (default) uses pokedata.ovh, which publishes a JSON
+  # per event including round-by-round match results (needed for true Elo) and
+  # full team lists, with no robots restrictions. "rk9" uses the legacy RK9
+  # scraper (note: RK9's robots.txt disallows the pages this needs).
+  source: "pokedata"
+  pokedata_host: "https://www.pokedata.ovh"
+  base_host: "https://rk9.gg"          # only used when source == rk9
+
+  # Only "majors": Regional and above. Cups / locals are ignored.
+  # Tiers are ranked low -> high; `min_tier` is the cut-off.
+  min_tier: "regional"
+  # Data format is stable from the 2023 season onward (Scarlet/Violet era).
+  first_season: 2023
+  request_delay_seconds: 1.0     # be polite: pause between requests
+  user_agent: "vgcelo-ladder/1.0 (+https://github.com/yourname/vgcelo)"
+  max_retries: 3
+
+glicko:
+  # Glicko-2 (the system Pokémon Showdown uses) is computed alongside Elo.
+  # Each tournament is treated as one rating period. GXE (the Showdown
+  # "X-Act estimate" — your chance of beating an average ladder player) is
+  # derived from the resulting rating + deviation.
+  initial_rating: 1500.0
+  initial_rd: 350.0
+  initial_vol: 0.06
+  tau: 0.5            # system volatility constant (Glicko-2)
+
+elo:
+  initial_rating: 1500.0
+  # K starts high and decreases linearly to k_final over a player's first
+  # k_decay_games rated games, so unknown players converge on their true rating
+  # quickly, then settle.
+  k_initial: 100
+  k_final: 32
+  k_decay_games: 10
+
+# Ladder RANK -> colour (the pokéball hierarchy, best first). These drive the
+# colour coding only; no text badge is shown on the ladder.
+#   Champion (gold)        = top 300
+#   Master   (masterball)  = top 3,000
+#   Player   (pokéball red) = everyone else
+# Ordered best -> worst; the first tier whose max_rank the player meets wins.
+# A null max_rank is the catch-all bottom tier.
+tiers:
+  - {key: champion, label: "Champion", max_rank: 300}
+  - {key: master,   label: "Master",   max_rank: 3000}
+  - {key: ace,      label: "Player",    max_rank: null}
+
+# In-person VGC competitive regulation calendar (Scarlet/Violet). Each event is
+# tagged with the regulation whose window contains its date; this drives the
+# regulation filters for tournaments, Pokémon usage, and player records.
+# Windows are contiguous; a regulation may appear more than once (it returns).
+# Source: victoryroad.pro/sv-rules-regulations
+regulations:
+  - {name: "Regulation A", start: "2023-01-02", end: "2023-01-31"}
+  - {name: "Regulation B", start: "2023-02-01", end: "2023-03-31"}
+  - {name: "Regulation C", start: "2023-04-01", end: "2023-06-30"}
+  - {name: "Regulation D", start: "2023-07-01", end: "2023-09-30"}
+  - {name: "Regulation E", start: "2023-10-01", end: "2024-01-03"}
+  - {name: "Regulation F", start: "2024-01-04", end: "2024-04-30"}
+  - {name: "Regulation G", start: "2024-05-01", end: "2024-08-31"}
+  - {name: "Regulation H", start: "2024-09-01", end: "2025-01-05"}
+  - {name: "Regulation G", start: "2025-01-06", end: "2025-04-30"}
+  - {name: "Regulation I", start: "2025-05-01", end: "2025-08-31"}
+  - {name: "Regulation H", start: "2025-09-01", end: "2025-11-30"}
+  - {name: "Regulation F", start: "2025-12-01", end: "2026-03-31"}
+  - {name: "Regulation I", start: "2026-04-01", end: "2026-05-28"}
+  # Post-Scarlet/Violet era (new game). Detected primarily from the data
+  # (these lists carry natures, not Tera types); the date is a fallback.
+  - {name: "Regulation M-A", start: "2026-05-29", end: null}

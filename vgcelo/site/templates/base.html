@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ site.title }}{% endblock %}</title>
+  <meta name="description" content="{{ site.tagline }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url('static/css/style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="{{ url('index.html') }}">
+        <span class="pokeball-mark"></span> {{ site.title }}
+      </a>
+      <nav class="nav">
+        <a href="{{ url('players.html') }}">Players</a>
+        <a href="{{ url('pokemon.html') }}">Pokémon</a>
+        <a href="{{ url('tournaments.html') }}">Tournaments</a>
+        <a href="{{ url('methodology.html') }}">Methodology</a>
+        <span class="search-box">
+          <input id="search-input" type="search" placeholder="Search…" autocomplete="off">
+          <div id="search-results" class="search-results"></div>
+        </span>
+      </nav>
+    </div>
+  </header>
+
+  {% block hero %}{% endblock %}
+
+  <main class="wrap">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <strong>{{ site.title }}</strong> — {{ site.tagline }}.<br>
+      Ratings recomputed {{ generated_at }}. Data sourced from RK9 majors
+      (Regional and above). Not affiliated with The Pokémon Company, Nintendo, or RK9.
+      Pokémon artwork © their respective owners.
+    </div>
+  </footer>
+
+  <script>
+    window.SEARCH_URL = "{{ url('search.json') }}";
+    window.URLBASE = "{{ url('') }}";
+  </script>
+  <script src="{{ url('static/js/main.js') }}"></script>
+</body>
+</html>

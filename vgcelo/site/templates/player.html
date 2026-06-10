@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% import "macros.html" as m %}
+{% block title %}{{ player.name }} · {{ site.title }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb"><a href="{{ url('index.html') }}">Home</a> /
+  <a href="{{ url('players.html') }}">Players</a> / {{ player.name }}</div>
+
+<div class="card">
+  <div class="profile-head">
+    <div>
+      <h1 style="margin-bottom:.1em">{{ m.flag(player.country) }} {{ player.name }}</h1>
+      <div class="chips">
+        <span class="chip t-{{ player.tier.key }}">Rank #{{ player.rank if player.rank else '—' }}</span>
+        {% if player.signature_pokemon %}
+        <span class="chip">Signature: {{ player.signature_pokemon.species }}</span>
+        {% endif %}
+      </div>
+    </div>
+    <div style="margin-left:auto;text-align:right">
+      <div class="big-rating t-{{ player.tier.key }}">{{ player.current_rating }}</div>
+      <div class="muted small">peak {{ player.peak_rating }}
+        {% if player.peak_at %}· {{ player.peak_at.tournament_name }}{% endif %}</div>
+    </div>
+  </div>
+  {% if player.rating_history|length > 1 %}
+  <div data-spark="{{ history_json }}" style="margin-top:14px"></div>
+  {% endif %}
+</div>
+
+<section class="section">
+  <div class="stat-grid">
+    <div class="stat"><div class="v">{{ player.gxe if player.gxe is not none else '—' }}</div><div class="k">GXE</div></div>
+    <div class="stat"><div class="v">{{ player.glicko if player.glicko is not none else '—' }}<span class="muted small"> ±{{ player.rd }}</span></div><div class="k">Glicko-2</div></div>
+    <div class="stat"><div class="v">{{ player.wins }}–{{ player.losses }}</div><div class="k">Record</div></div>
+    <div class="stat"><div class="v">{{ player.win_rate }}%</div><div class="k">Win rate</div></div>
+    <div class="stat"><div class="v">{{ player.games }}</div><div class="k">Rated games</div></div>
+    <div class="stat"><div class="v">{{ player.tournaments_played }}</div><div class="k">Majors played</div></div>
+    <div class="stat"><div class="v">{{ ('#' ~ player.best_placement) if player.best_placement else '—' }}</div><div class="k">Best finish</div></div>
+    <div class="stat"><div class="v">{{ player.longest_win_streak }}</div><div class="k">Longest win streak</div></div>
+    <div class="stat"><div class="v">{{ player.longest_loss_streak }}</div><div class="k">Longest loss streak</div></div>
+    <div class="stat"><div class="v">{{ player.peak_rating }}</div><div class="k">Peak rating</div></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="grid cols-2">
+    <div class="card">
+      <h3>Biggest upmatch</h3>
+      {% if player.biggest_upmatch %}
+        {% set u = player.biggest_upmatch %}
+        <p>Beat <a href="{{ url('player/' ~ u.opponent_id ~ '.html') }}">{{ u.opponent_name }}</a>
+          at <a href="{{ url('tournament/' ~ u.tournament_id ~ '.html') }}">{{ u.tournament_name }}</a>
+          {% if u.round %}(R{{ u.round }}){% endif %}
+          for {{ m.delta(u.delta) }} rating.</p>
+      {% else %}<p class="muted">No rated wins yet.</p>{% endif %}
+    </div>
+    <div class="card">
+      <h3>Toughest loss</h3>
+      {% if player.worst_loss %}
+        {% set l = player.worst_loss %}
+        <p>Lost to <a href="{{ url('player/' ~ l.opponent_id ~ '.html') }}">{{ l.opponent_name }}</a>
+          at <a href="{{ url('tournament/' ~ l.tournament_id ~ '.html') }}">{{ l.tournament_name }}</a>
+          {% if l.round %}(R{{ l.round }}){% endif %}
+          for {{ m.delta(l.delta) }} rating.</p>
+      {% else %}<p class="muted">No rated losses yet.</p>{% endif %}
+    </div>
+  </div>
+</section>
+
+{% if player.reg_record %}
+<section class="section">
+  <h2>Record by regulation</h2>
+  <div class="scroll-x">
+  <table class="table">
+    <thead><tr><th>Regulation</th><th class="num">W–L</th>
+      <th class="num">Win rate</th><th class="num">Events</th></tr></thead>
+    <tbody>
+      {% for rr in player.reg_record %}
+      <tr><td>{{ rr.regulation }}</td>
+        <td class="num">{{ rr.wins }}–{{ rr.losses }}</td>
+        <td class="num">{{ (rr.win_rate ~ '%') if rr.win_rate is not none else '—' }}</td>
+        <td class="num">{{ rr.events }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endif %}
+
+<section class="section">
+  <h2>Pokémon used</h2>
+  <div class="scroll-x">
+  <table class="table">
+    <thead><tr><th>Pokémon</th><th class="num">Events</th>
+      <th class="num">W–L</th><th class="num">Win rate</th></tr></thead>
+    <tbody>
+      {% for pk in player.pokemon_usage %}
+      <tr>
+        <td>{{ m.poke_link(pk.slug, pk.image, pk.species, 'sm') }}</td>
+        <td class="num">{{ pk.tournaments }}</td>
+        <td class="num">{{ pk.wins }}–{{ pk.losses }}</td>
+        <td class="num">{{ (pk.win_rate ~ '%') if pk.win_rate is not none else '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Tournament history</h2>
+  {% for th in player.tournament_history %}
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div>
+        <strong><a href="{{ url('tournament/' ~ th.tournament_id ~ '.html') }}">{{ th.tournament_name }}</a></strong>
+        {{ m.tier_tag(th.tier) }}
+        {% if th.regulation %}<span class="tag">{{ th.regulation }}</span>{% endif %}
+        <span class="muted small">{{ th.date }}</span>
+      </div>
+      <div>
+        <span class="chip">Record {{ th.record }}</span>
+        {% if th.placement %}<span class="chip">Finish #{{ th.placement }}</span>{% endif %}
+      </div>
+    </div>
+
+    {% if th.team %}
+    <div class="team-row" style="margin:12px 0">
+      {% for mon in th.team %}
+        <a href="{{ url('pokemon/' ~ mon.slug ~ '.html') }}">{{ m.poke_img(mon.image, mon.species, 'sm') }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="scroll-x">
+    <table class="table">
+      <thead><tr><th>Round</th><th>Opponent</th><th>Result</th><th class="num">Δ</th></tr></thead>
+      <tbody>
+        {% for mt in th.matches %}
+        <tr>
+          <td class="small">{{ 'TC' if mt.phase == 'top_cut' else 'R' }}{{ mt.round }}</td>
+          <td>{% if mt.opponent_id %}<a href="{{ url('player/' ~ mt.opponent_id ~ '.html') }}">{{ mt.opponent_name }}</a>{% else %}<span class="muted">Bye</span>{% endif %}</td>
+          <td><span class="pill {{ mt.result }}">{{ mt.result }}</span></td>
+          <td class="num">{% if mt.delta %}{{ m.delta(mt.delta) }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% else %}
+  <p class="muted">No tournament data.</p>
+  {% endfor %}
+</section>
+{% endblock %}

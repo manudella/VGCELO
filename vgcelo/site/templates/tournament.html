@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% import "macros.html" as m %}
+{% block title %}{{ t.name }} · {{ site.title }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb"><a href="{{ url('index.html') }}">Home</a> /
+  <a href="{{ url('tournaments.html') }}">Tournaments</a> / {{ t.name }}</div>
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+    <h1 style="margin:0">{{ t.name }}</h1>
+    {{ m.tier_tag(t.tier) }}
+  </div>
+  <div class="chips" style="margin-top:8px">
+    <span class="chip">{{ t.start_date }}</span>
+    {% if t.location %}<span class="chip">{{ t.location }}</span>{% endif %}
+    {% if t.attendance %}<span class="chip">{{ t.attendance }} players</span>{% endif %}
+    {% if t.regulation %}<span class="chip">{{ t.regulation }}</span>{% endif %}
+    <span class="chip">Season {{ t.season }}</span>
+    {% if t.source_url %}<a class="chip" href="{{ t.source_url }}">RK9 ↗</a>{% endif %}
+  </div>
+</div>
+
+<section class="section">
+  <h2>Most-used Pokémon here</h2>
+  <div class="grid cols-4">
+    {% for pk in t.top_usage %}
+    <a class="card mon-card" href="{{ url('pokemon/' ~ pk.slug ~ '.html') }}">
+      {{ m.poke_img(pk.image, pk.species) }}
+      <div><div class="name small">{{ pk.species }}</div>
+        <div class="muted small">{{ pk.pct }}%</div></div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <h2>Standings</h2>
+  <div class="scroll-x">
+  <table class="table">
+    <thead><tr><th class="rank">#</th><th>Player</th>
+      <th class="num">Rating</th><th>Team</th></tr></thead>
+    <tbody>
+      {% for s in t.standings %}
+      <tr>
+        <td class="rank">{{ s.placement or '—' }}</td>
+        <td><a href="{{ url('player/' ~ s.player_id ~ '.html') }}">{{ s.player_name }}</a></td>
+        <td class="num rating{% if s.tier %} t-{{ s.tier.key }}{% endif %}">{{ s.rating or '—' }}</td>
+        <td><div class="team-row">
+          {# Team sprites only for top cut to keep big-event pages light;
+             full teams are on each player's profile and the Pokémon pages. #}
+          {% if s.placement and s.placement <= 16 %}
+          {% for mon in s.team %}
+            <a href="{{ url('pokemon/' ~ mon.slug ~ '.html') }}">{{ m.poke_img(mon.image, mon.species, 'sm') }}</a>
+          {% endfor %}
+          {% endif %}
+        </div></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="section">
+  {% set topcut = t.rounds | selectattr('phase', 'equalto', 'top_cut') | list %}
+  {% if topcut %}
+  <h2>Top cut</h2>
+  <p class="muted small">Full round-by-round results for every player are on each
+     player's profile page.</p>
+  {% for r in topcut %}
+  <details class="card" style="margin-bottom:10px" open>
+    <summary><strong>Top Cut · Round {{ r.round }}</strong>
+      <span class="muted small">({{ r.pairings|length }} matches)</span></summary>
+    <div class="scroll-x" style="margin-top:10px">
+    <table class="table">
+      <tbody>
+        {% for g in r.pairings %}
+        <tr>
+          <td class="{{ 'rating' if g.winner_id == g.p1_id else '' }}">
+            {% if g.p1_id %}<a href="{{ url('player/' ~ g.p1_id ~ '.html') }}">{{ g.p1_name }}</a>{% else %}{{ g.p1_name }}{% endif %}
+            {% if g.winner_id == g.p1_id %}✓{% endif %}
+          </td>
+          <td class="muted small">vs</td>
+          <td class="{{ 'rating' if g.winner_id == g.p2_id else '' }}">
+            {% if g.p2_id %}<a href="{{ url('player/' ~ g.p2_id ~ '.html') }}">{{ g.p2_name }}</a>{% else %}<span class="muted">{{ g.p2_name }}</span>{% endif %}
+            {% if g.winner_id == g.p2_id %}✓{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </details>
+  {% endfor %}
+  {% endif %}
+</section>
+{% endblock %}

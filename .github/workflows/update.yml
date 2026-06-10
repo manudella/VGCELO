@@ -1,0 +1,83 @@
+# Autonomous ladder update + deploy to GitHub Pages.
+#
+# What it does, unattended:
+#   1. restores the persisted state (SQLite DB, raw scrape cache, artwork) from
+#      the Actions cache,
+#   2. scrapes the source for any *new* majors and ingests them (incremental),
+#   3. recomputes Elo + Glicko from scratch,
+#   4. downloads artwork for any newly seen Pokémon,
+#   5. rebuilds the static site into dist/,
+#   6. saves the updated state back to the cache,
+#   7. publishes dist/ to GitHub Pages.
+#
+# State is persisted in the Actions cache (not git): the database is well over
+# GitHub's 100 MB per-file limit, and the cache also keeps raw responses so each
+# run only fetches the index plus any brand-new event — cheap and polite.
+#
+# Schedule: every 8 hours. Results for a new major appear within a day or two;
+# the "scrape only new events" logic makes most runs near-instant no-ops.
+
+name: Update ladder
+
+on:
+  schedule:
+    - cron: "0 */8 * * *"      # every 8 hours (UTC)
+  workflow_dispatch:            # manual "Run workflow" button
+  push:
+    branches: [main]           # rebuild when you change code/config
+    paths-ignore:
+      - "dist/**"
+
+permissions:
+  pages: write
+  id-token: write
+
+concurrency:
+  group: ladder-update
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      # Persist the DB, raw scrape cache, and downloaded artwork across runs.
+      # A unique key always misses, so the post-step always saves a fresh cache;
+      # restore-keys loads the most recent previous one.
+      - name: Restore ladder state
+        uses: actions/cache@v4
+        with:
+          path: |
+            data/vgcelo.sqlite3
+            data/cache
+            vgcelo/site/static/pokemon
+          key: vgcelo-state-${{ github.run_id }}
+          restore-keys: |
+            vgcelo-state-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Scrape new majors, recompute ratings, fetch artwork, build site
+        run: python -m vgcelo.cli update
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

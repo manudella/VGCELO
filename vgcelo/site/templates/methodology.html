@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% import "macros.html" as m %}
+{% block title %}Methodology · {{ site.title }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb"><a href="{{ url('index.html') }}">Home</a> / Methodology</div>
+<h1>How the ratings & stats work</h1>
+<p class="muted">Everything on this site is computed deterministically from public
+RK9 data. This page documents exactly how, so the numbers are auditable.</p>
+
+<section class="section">
+  <h2>What counts</h2>
+  <div class="card">
+    <ul>
+      <li><strong>Source:</strong> RK9 — the official tournament data (placings,
+        team lists, and round-by-round pairings and results).</li>
+      <li><strong>Events:</strong> <em>majors only</em> — Regional Championships
+        and above (Regionals, Special Events, Internationals, Worlds). Cups and
+        locals are excluded.</li>
+      <li><strong>Window:</strong> from the {{ config.scrape.first_season }} season
+        onward, when the Scarlet/Violet data format stabilised.</li>
+      <li><strong>Division:</strong> Masters only.</li>
+      <li>A <strong>match</strong> is one best-of-three set between two players in
+        a round. Byes are recorded but are not rated.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="section">
+  <h2>The Elo rating</h2>
+  <div class="card">
+    <p>Every player starts at <strong>{{ config.elo.initial_rating|int }}</strong>.
+       After each match the winner takes points from the loser. The amount
+       depends on how surprising the result was: beating a much higher-rated
+       opponent earns a lot; beating a much lower-rated one earns little.</p>
+
+    <p>The expected score for player A against player B is the standard logistic
+       curve:</p>
+    <p style="font-family:ui-monospace,monospace;background:#f4f5f8;padding:10px 14px;border-radius:10px">
+      E<sub>A</sub> = 1 / (1 + 10<sup>(R<sub>B</sub> − R<sub>A</sub>) / 400</sup>)
+    </p>
+    <p>and the update is
+      <code>R&prime; = R + K · (S − E)</code>, where S is 1 for a win, 0 for a
+      loss (½ for a tie).</p>
+
+    <h3>The K-factor</h3>
+    <p>K controls how much a single result moves your rating. It starts high so
+       an unknown player converges on their true rating quickly, then decreases
+       linearly to a stable value over their first
+       <strong>{{ config.elo.k_decay_games }}</strong> rated games:</p>
+    <p style="font-family:ui-monospace,monospace;background:#f4f5f8;padding:10px 14px;border-radius:10px">
+      K(g) = {{ config.elo.k_initial }} − ({{ config.elo.k_initial }} −
+      {{ config.elo.k_final }}) · (g / {{ config.elo.k_decay_games }}), capped at
+      {{ config.elo.k_final }}
+    </p>
+    <p>where <code>g</code> is how many rated games the player had before the
+       match. So a brand-new player uses K = {{ config.elo.k_initial }}; after
+       {{ config.elo.k_decay_games }}+ games it settles at
+       {{ config.elo.k_final }}. There is no tournament-tier weighting and no
+       seasonal reset — every game counts the same and ratings are continuous.</p>
+
+    <p class="small muted">Ratings are recomputed from scratch each update by
+       replaying every match in chronological order, so results are fully
+       reproducible.</p>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Glicko-2 &amp; GXE (Showdown-style)</h2>
+  <div class="card">
+    <p>Alongside Elo we compute <strong>Glicko-2</strong>, the system Pokémon
+       Showdown uses. As well as a rating it tracks a <strong>rating deviation</strong>
+       (RD — how confident we are) and a <strong>volatility</strong>. Each
+       tournament is treated as one Glicko-2 “rating period”: all of a player's
+       matches at an event update their rating together, and an inactive player's
+       RD slowly grows (we become less sure of a rusty player).</p>
+    <p><strong>GXE</strong> (“X-Act estimate”) is derived from a player's Glicko
+       rating and RD exactly as Showdown defines it: the estimated percentage
+       chance they would beat an average ladder player. A player on a long
+       win streak against strong opposition trends toward a high GXE with a low
+       (tight) RD.</p>
+    <p class="small muted">Starting values: rating
+      {{ config.raw.glicko.initial_rating|int }}, RD
+      {{ config.raw.glicko.initial_rd|int }}, volatility
+      {{ config.raw.glicko.initial_vol }}, system constant τ =
+      {{ config.raw.glicko.tau }}.</p>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Regulations</h2>
+  <div class="card">
+    <p>Every event is tagged with the VGC <strong>regulation</strong> (legal
+       Pokémon set) in force on its date. You can filter the tournament list and
+       the Pokémon usage ranking by regulation, and each player's record is broken
+       down by regulation. The in-person competitive calendar:</p>
+    <table class="table">
+      <thead><tr><th>Regulation</th><th>From</th><th>To</th></tr></thead>
+      <tbody>
+        {% for r in config.regulations %}
+        <tr><td>{{ r.name }}</td><td>{{ r.start }}</td>
+          <td>{{ r.end or 'present' }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="small muted">Source: victoryroad.pro. A regulation can appear more
+       than once (formats return); events in either window share the tag.</p>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Ladder colours</h2>
+  <div class="card">
+    <p>The ladder is coloured by <strong>rank</strong>, following the pokéball
+       hierarchy. There is no text badge — just the colour:</p>
+    <table class="table">
+      <thead><tr><th>Colour</th><th>Rank</th></tr></thead>
+      <tbody>
+        {% for tier in config.tiers %}
+        <tr>
+          <td><span class="t-{{ tier.key }}" style="font-weight:800">{{ tier.label }}</span></td>
+          <td>{% if tier.max_rank %}top {{ '{:,}'.format(tier.max_rank) }}{% else %}everyone else{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Player metrics</h2>
+  <div class="card">
+    <ul>
+      <li><strong>Peak rating</strong> — the highest rating ever reached.</li>
+      <li><strong>Win rate</strong> — rated wins ÷ (wins + losses); byes and ties
+        are excluded from the denominator.</li>
+      <li><strong>Longest win / loss streak</strong> — the longest run of
+        consecutive rated wins (or losses) across the player's whole career, in
+        chronological order.</li>
+      <li><strong>Biggest upmatch</strong> — the single rated win that earned the
+        most Elo, i.e. the biggest upset against a higher-rated opponent.</li>
+      <li><strong>Per-Pokémon win rate</strong> — the player's match record in the
+        events where that Pokémon was on their team.</li>
+      <li><strong>Signature Pokémon</strong> — the species they have brought to
+        the most majors.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Pokémon metrics</h2>
+  <div class="card">
+    <ul>
+      <li><strong>Usage %</strong> — the share of all published team lists that
+        include the Pokémon.</li>
+      <li><strong>Win rate</strong> — aggregated match win rate of every player in
+        the events where they used it.</li>
+      <li><strong>Set breakdown</strong> — among all copies of the Pokémon, the
+        percentage running each item, Tera type, ability and move. (This is what
+        powers lines like “% of Flutter Mane holding Choice Specs”.) Moves are a
+        percentage of copies that ran the move; the four bars therefore sum to
+        roughly 400%.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Caveats</h2>
+  <div class="card">
+    <ul>
+      <li>VGC sets are best-of-three; the source reports the set winner, not
+        individual games, so Elo is per-set.</li>
+      <li>Team lists are only available where the source published them (newer
+        events have them; some older events carry results only), so usage stats
+        lean toward more recent seasons.</li>
+      <li>Set data depends on the era: <strong>Scarlet/Violet</strong> lists
+        expose <strong>Tera types</strong>, while the post-SV <strong>Regulation
+        M-A</strong> (Champions) era exposes <strong>stat alignment</strong>
+        instead. EV spreads are not provided in either, so they aren't shown.
+        Pokémon stats can be filtered by regulation.</li>
+      <li>Players are keyed by name; rare name collisions could merge two people.</li>
+    </ul>
+  </div>
+</section>
+{% endblock %}

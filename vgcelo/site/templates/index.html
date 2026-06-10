@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% import "macros.html" as m %}
+
+{% block hero %}
+<section class="hero">
+  <div class="wrap">
+    <h1>{{ site.title }}</h1>
+    <p>{{ site.tagline }}. A skill rating for competitive VGC built from every
+       Regional, International and World Championship since the 2023 season,
+       sourced from RK9.</p>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+
+<section class="section">
+  <h2>Top of the ladder</h2>
+  <div class="scroll-x">
+  <table class="table">
+    <thead>
+      <tr><th class="rank">#</th><th>Player</th>
+          <th class="num">Elo</th><th class="num">GXE</th><th class="num">Glicko</th>
+          <th class="num">W–L</th><th class="num">Win%</th><th class="num">Events</th></tr>
+    </thead>
+    <tbody>
+      {% for p in leaderboard[:25] %}
+      <tr class="row-{{ p.tier.key }}">
+        <td class="rank t-{{ p.tier.key }}">{{ p.rank }}</td>
+        <td>{{ m.flag(p.country) }}
+            <a href="{{ url('player/' ~ p.id ~ '.html') }}">{{ p.name }}</a></td>
+        <td class="num rating t-{{ p.tier.key }}">{{ p.current_rating }}</td>
+        <td class="num">{{ p.gxe if p.gxe is not none else '—' }}</td>
+        <td class="num muted">{{ p.glicko if p.glicko is not none else '—' }}</td>
+        <td class="num">{{ p.wins }}–{{ p.losses }}</td>
+        <td class="num">{{ p.win_rate }}%</td>
+        <td class="num">{{ p.tournaments_played }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="small"><a href="{{ url('players.html') }}">See the full ladder →</a></p>
+</section>
+
+<section class="section">
+  <h2>Records</h2>
+  <div class="grid cols-3">
+    <div class="card">
+      <h3>Biggest upmatches</h3>
+      {% for p in records.biggest_upmatches[:6] %}
+        {% set u = p.biggest_upmatch %}
+        <div class="bar" style="grid-template-columns: 1fr auto;">
+          <div><a href="{{ url('player/' ~ p.id ~ '.html') }}">{{ p.name }}</a>
+            <span class="muted small">beat
+            <a href="{{ url('player/' ~ u.opponent_id ~ '.html') }}">{{ u.opponent_name }}</a></span></div>
+          <div class="delta-pos">{{ m.delta(u.delta) }}</div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="card">
+      <h3>Longest win streaks</h3>
+      {% for p in records.longest_win_streak[:6] %}
+        <div class="bar" style="grid-template-columns: 1fr auto;">
+          <div><a href="{{ url('player/' ~ p.id ~ '.html') }}">{{ p.name }}</a></div>
+          <div class="rating">{{ p.longest_win_streak }}</div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="card">
+      <h3>Highest peak rating</h3>
+      {% for p in records.highest_peak[:6] %}
+        <div class="bar" style="grid-template-columns: 1fr auto;">
+          <div>{{ m.flag(p.country) }}<a href="{{ url('player/' ~ p.id ~ '.html') }}">{{ p.name }}</a></div>
+          <div class="rating t-{{ p.tier.key }}">{{ p.peak_rating }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Most-used Pokémon</h2>
+  <div class="grid cols-4">
+    {% for pk in pokemon_top %}
+    <a class="card mon-card" href="{{ url('pokemon/' ~ pk.slug ~ '.html') }}">
+      {{ m.poke_img(pk.image, pk.species, 'lg') }}
+      <div>
+        <div class="name">{{ pk.species }}</div>
+        <div class="muted small">{{ pk.usage_pct }}% usage</div>
+        {% if pk.win_rate is not none %}<div class="small">{{ pk.win_rate }}% win rate</div>{% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  <p class="small"><a href="{{ url('pokemon.html') }}">All Pokémon →</a></p>
+</section>
+
+<section class="section">
+  <h2>Recent majors</h2>
+  <div class="grid cols-2">
+    {% for t in tournaments %}
+    <a class="card" href="{{ url('tournament/' ~ t.id ~ '.html') }}">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <strong>{{ t.name }}</strong> {{ m.tier_tag(t.tier) }}
+      </div>
+      <div class="muted small">{{ t.start_date }}{% if t.location %} · {{ t.location }}{% endif %}
+        {% if t.regulation %}· {{ t.regulation }}{% endif %}
+        {% if t.attendance %}· {{ t.attendance }} players{% endif %}</div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+{% endblock %}

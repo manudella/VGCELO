@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Players · {{ site.title }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb"><a href="{{ url('index.html') }}">Home</a> / Players</div>
+<h1>Player ladder</h1>
+
+<div class="filter-bar">
+  <label>Nationality
+    <select id="country-filter">
+      <option value="">All countries</option>
+      {% for c in countries %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Search
+    <input id="ladder-search" type="search" placeholder="Player name…" autocomplete="off">
+  </label>
+  <span id="ladder-count" class="muted small"></span>
+</div>
+
+<div class="scroll-x">
+<table class="table" id="ladder">
+  <thead>
+    <tr><th class="rank">#</th><th>Player</th>
+        <th class="num">Elo</th><th class="num">GXE</th>
+        <th class="num">Glicko</th><th class="num">RD</th>
+        <th class="num">W–L</th><th class="num">Win%</th>
+        <th class="num">Events</th><th class="num">Best</th></tr>
+  </thead>
+  <tbody id="ladder-body"><tr><td colspan="10" class="muted">Loading ladder…</td></tr></tbody>
+</table>
+</div>
+
+<div class="pager" id="ladder-pager"></div>
+
+<script>window.LADDER_URL = "{{ url('ladder.json') }}";</script>
+{% endblock %}
