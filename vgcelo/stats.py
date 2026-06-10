@@ -174,11 +174,34 @@ def build_stats(conn: sqlite3.Connection, config: Config) -> dict[str, Any]:
 
     tournament_reg = {tid: _reg_for(tid) for tid in tournaments}
 
+    # Day-2 cut: the Swiss round at which the field is sharply reduced for the
+    # second day. Detected as the first Swiss round whose participant count
+    # drops to <=55% of the event's peak field (Day-1 attrition is gradual; the
+    # Day-2 cut is a cliff). None => single-day event (no Day 2).
+    round_field: dict[str, dict[int, set]] = defaultdict(lambda: defaultdict(set))
+    for m in data["matches"]:
+        if m["phase"] != "swiss" or m["round"] is None:
+            continue
+        s = round_field[m["tournament_id"]][m["round"]]
+        s.add(m["p1_id"])
+        if m["p2_id"]:
+            s.add(m["p2_id"])
+    day2_start: dict[str, int | None] = {}
+    for tid, rounds in round_field.items():
+        counts = {r: len(p) for r, p in rounds.items()}
+        peak = max(counts.values()) if counts else 0
+        start = None
+        for r in sorted(counts):
+            if peak and counts[r] <= 0.55 * peak:
+                start = r
+                break
+        day2_start[tid] = start
+
     player_profiles = {
         pid: _build_player(
             pid, players[pid], by_player[pid], tournaments, players,
             teams_by_player, team_pokemon, team_by_pt, pt_record,
-            tournament_reg, config,
+            tournament_reg, day2_start, config,
         )
         for pid in players
     }
@@ -254,7 +277,7 @@ def build_stats(conn: sqlite3.Connection, config: Config) -> dict[str, Any]:
 
 def _build_player(
     pid, prow, pviews, tournaments, players, teams_by_player, team_pokemon,
-    team_by_pt, pt_record, tournament_reg, config,
+    team_by_pt, pt_record, tournament_reg, day2_start, config,
 ):
     decided = [v for v in pviews if not v["is_bye"] and v["won"] is not None]
     wins = sum(1 for v in decided if v["won"])
@@ -291,6 +314,17 @@ def _build_player(
     # Streaks (over decided matches in order)
     longest_win = _longest(decided, True)
     longest_loss = _longest(decided, False)
+
+    # Day-2 qualifications and top-cut appearances (distinct tournaments).
+    day2_tids, topcut_tids = set(), set()
+    for v in pviews:
+        tid = v["tournament_id"]
+        if v["phase"] == "top_cut":
+            topcut_tids.add(tid)
+        elif v["phase"] == "swiss":
+            ds = day2_start.get(tid)
+            if ds is not None and v["round"] is not None and v["round"] >= ds:
+                day2_tids.add(tid)
 
     # Biggest upset = the win against the opponent who was rated highest *above*
     # the player going into the match (largest pre-match Elo gap overcome).
@@ -430,6 +464,8 @@ def _build_player(
         "games": games,
         "win_rate": round(100 * wins / games, 1) if games else 0.0,
         "tournaments_played": len(seen_t),
+        "day2_count": len(day2_tids),
+        "top_cut_count": len(topcut_tids),
         "best_placement": best_placement,
         "longest_win_streak": longest_win,
         "longest_loss_streak": longest_loss,
