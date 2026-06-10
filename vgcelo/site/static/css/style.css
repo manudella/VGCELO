@@ -219,3 +219,52 @@ footer { padding: 40px 0; color: var(--ink-soft); font-size: .85rem; border-top:
 .pager button:disabled { opacity: .4; cursor: default; }
 .filter-bar input { padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px;
   font: inherit; margin-left: 8px; }
+
+/* =============================================================================
+   Mobile (≤640px). Desktop layout above is untouched — everything here is
+   inside media queries so it only applies to small screens.
+   ============================================================================= */
+@media (max-width: 640px) {
+  .wrap { padding: 0 14px; }
+
+  /* Header: brand on top, nav wraps below it, search full-width on its own line */
+  .topbar .wrap { height: auto; flex-wrap: wrap; gap: 8px 14px; padding: 10px 14px; }
+  .nav { margin-left: 0; width: 100%; flex-wrap: wrap; gap: 10px 16px; }
+  .search-box { flex: 1 1 100%; }
+  .search-box input { width: 100%; }
+  .search-results { width: 100%; left: 0; right: auto; }
+
+  /* Tighter hero / sections / cards */
+  .hero { padding: 30px 0; }
+  .hero h1 { font-size: 1.6rem; }
+  .hero p { font-size: .95rem; }
+  .section { padding: 24px 0; }
+  .section h2 { font-size: 1.2rem; }
+  .card { padding: 14px 16px; }
+
+  /* Denser tables (still scroll horizontally inside .scroll-x) */
+  .table th, .table td { padding: 8px 10px; font-size: .88rem; }
+
+  /* Profile header: don't push the big rating off-screen */
+  .profile-head { gap: 12px; }
+  .profile-head .big-rating { font-size: 2rem; }
+  .profile-head > div[style*="margin-left"] { margin-left: 0 !important; text-align: left !important; }
+
+  /* Filter controls stack full-width */
+  .filter-bar { gap: 10px; }
+  .filter-bar label { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+  .filter-bar select, .filter-bar input { width: 100%; margin-left: 0; }
+
+  /* Set-breakdown bars: smaller label column */
+  .bar { grid-template-columns: 96px 1fr 44px; }
+}
+
+@media (max-width: 560px) {
+  /* Ladder column order: 1 # · 2 Player · 3 Elo · 4 Peak · 5 GXE · 6 Glicko ·
+     7 RD · 8 W–L · 9 Win% · 10 Events · 11 Best.
+     On phones hide RD, Events and Best so the key numbers fit with little or no
+     horizontal scrolling (full table still on tablet/desktop). */
+  #ladder th:nth-child(7),  #ladder td:nth-child(7),
+  #ladder th:nth-child(10), #ladder td:nth-child(10),
+  #ladder th:nth-child(11), #ladder td:nth-child(11) { display: none; }
+}
