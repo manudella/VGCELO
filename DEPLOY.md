@@ -131,6 +131,42 @@ usage/set stats fill in from events that include lists.
 
 ---
 
+## 8. Optional: auto-post new majors to X (Twitter)
+
+The workflow can tweet a link to each new major automatically. It stays off until
+you add credentials (the step no-ops without them) and it never floods your
+timeline: the **first run with credentials silently baselines** all existing
+majors, then only genuinely new events get posted (one tweet each, with winner,
+attendance, regulation, and a link to that event's page).
+
+**Setup:**
+
+1. Use or create the X account that will do the posting.
+2. At [developer.x.com](https://developer.x.com), sign up for a (free) developer
+   account and create a **Project → App**.
+3. In the app's **User authentication settings**, turn on OAuth 1.0a with
+   **Read and write** permission.
+4. On the **Keys and tokens** tab, generate:
+   - **API Key** + **API Key Secret** (the consumer keys), and
+   - **Access Token** + **Access Token Secret** — generate/regenerate these
+     *after* setting Read and write, or they'll be read-only.
+5. In the repo: **Settings → Secrets and variables → Actions → New repository
+   secret** — add all four (exact names):
+   `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET`.
+6. That's it. The next scheduled/manual run baselines silently; from then on each
+   new major is tweeted.
+
+**Preview the wording locally (no posting):**
+
+```bash
+python -m vgcelo.cli announce --dry-run --max 3
+```
+
+The free X API tier comfortably covers this (majors are infrequent). To stop
+posting, just delete the secrets.
+
+---
+
 ## Alternative hosting
 
 The output in `dist/` is plain static files, so anything works:
