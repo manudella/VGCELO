@@ -42,6 +42,14 @@ _NAME_COUNTRY_RE = re.compile(r"^(.*?)\s*\[([A-Za-z]{2})\]\s*$")
 # always has far more. Used to label a round's phase without an extra request.
 _TOPCUT_MAX = 16
 
+# pokedata emits an unquoted token `"table":Bye` for bye rounds, which is invalid
+# JSON. Quote it so the event parses. (Matches `:Bye` followed by , } or ].)
+_BARE_BYE = re.compile(r':Bye([,}\]])')
+
+
+def _loads(text: str):
+    return json.loads(_BARE_BYE.sub(r':"Bye"\1', text))
+
 
 @dataclass
 class EventMeta:
@@ -178,7 +186,7 @@ def scrape_all(conn, config: Config, *, refresh: bool = False,
         stale_ok = today > _add_days(meta.end_date, 3)
         url = f"{host}/standingsVGC/{meta.code}/masters/{meta.code}_Masters.json"
         try:
-            players = json.loads(client.get(url, use_cache=stale_ok and use_cache))
+            players = _loads(client.get(url, use_cache=stale_ok and use_cache))
         except Exception as exc:
             print(f"  ! fetch failed {meta.code} ({meta.name}): {exc}")
             continue
