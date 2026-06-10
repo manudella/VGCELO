@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 
@@ -154,10 +154,12 @@ def scrape_all(conn, config: Config, *, refresh: bool = False,
     existing = ({r["id"] for r in conn.execute("SELECT id FROM tournaments")}
                 if not refresh else set())
 
-    # pokedata posts results live (round by round). Only ingest an event once it
-    # is finished, i.e. the current date is past its last day — otherwise we'd
-    # store a half-played tournament (and announce a non-final "winner"). The
-    # event is simply picked up on a later run once it's over.
+    # pokedata posts results live (round by round). An event is only ingested
+    # once it is genuinely *finished* — determined from the data (the top-cut
+    # final has a decided result), which is timezone-independent (unlike a UTC
+    # date check, which would misfire for events west of UTC still playing their
+    # last day). A multi-day date fallback guarantees an event is never dropped
+    # permanently if the completion heuristic ever misreads the bracket.
     today = date.today().isoformat()
 
     processed = 0
@@ -166,14 +168,30 @@ def scrape_all(conn, config: Config, *, refresh: bool = False,
         tid = f"pd-{meta.code}"
         if tid in existing:
             continue
-        if meta.end_date and today <= meta.end_date:
-            skipped_live += 1
-            print(f"  ~ not finished, skipping: {meta.name} (ends {meta.end_date})")
+        if meta.start_date > today:        # not started yet — don't even fetch
             continue
         if limit is not None and processed >= limit:
             break
+
+        # Recent events may still be live, so always fetch fresh (never trust a
+        # possibly-partial cached copy); old events can use the cache.
+        stale_ok = today > _add_days(meta.end_date, 3)
+        url = f"{host}/standingsVGC/{meta.code}/masters/{meta.code}_Masters.json"
         try:
-            _ingest_event(conn, client, host, meta, tid, use_cache=use_cache)
+            players = json.loads(client.get(url, use_cache=stale_ok and use_cache))
+        except Exception as exc:
+            print(f"  ! fetch failed {meta.code} ({meta.name}): {exc}")
+            continue
+        if not isinstance(players, list) or not players:
+            continue
+
+        finished = _event_complete(players) or stale_ok
+        if not finished:
+            skipped_live += 1
+            print(f"  ~ in progress, skipping until finished: {meta.name}")
+            continue
+        try:
+            _ingest_event(conn, host, meta, tid, players)
             processed += 1
             print(f"  + {meta.name} ({meta.start_date}) [{meta.tier}]")
         except Exception as exc:
@@ -186,13 +204,37 @@ def scrape_all(conn, config: Config, *, refresh: bool = False,
             "skipped_in_progress": skipped_live}
 
 
-def _ingest_event(conn, client, host, meta: EventMeta, tid: str, *,
-                  use_cache: bool) -> None:
-    url = f"{host}/standingsVGC/{meta.code}/masters/{meta.code}_Masters.json"
-    players = json.loads(client.get(url, use_cache=use_cache))
-    if not isinstance(players, list) or not players:
-        raise ValueError("empty or unexpected JSON")
+def _add_days(iso: str, days: int) -> str:
+    try:
+        return (dateparser.parse(iso) + timedelta(days=days)).strftime("%Y-%m-%d")
+    except (ValueError, OverflowError, TypeError):
+        return iso
 
+
+def _event_complete(players: list) -> bool:
+    """True once the top-cut final has a decided result (timezone-independent)."""
+    round_players: dict[str, set] = defaultdict(set)
+    for pr in players:
+        for rk in (pr.get("rounds") or {}):
+            round_players[rk].add(pr.get("name") or "")
+    topcut = {r: len(s) for r, s in round_players.items()
+              if 0 < len(s) <= _TOPCUT_MAX}
+    if not topcut:
+        return False                       # top cut hasn't started
+    min_n = min(topcut.values())
+    if min_n > 2:
+        return False                       # final round not reached yet
+    final_rounds = [r for r, n in topcut.items() if n == min_n]
+    for pr in players:
+        rounds = pr.get("rounds") or {}
+        for r in final_rounds:
+            rd = rounds.get(r)
+            if rd and (rd.get("result") or "").strip().upper()[:1] in ("W", "L"):
+                return True                # the final has been played
+    return False
+
+
+def _ingest_event(conn, host, meta: EventMeta, tid: str, players: list) -> None:
     fmt = _detect_format(players)
     conn.execute(
         """INSERT INTO tournaments
