@@ -174,6 +174,18 @@ def build_stats(conn: sqlite3.Connection, config: Config) -> dict[str, Any]:
 
     tournament_reg = {tid: _reg_for(tid) for tid in tournaments}
 
+    # Regulations ordered most-recent-first (by each regulation's latest event
+    # date — handles regulations that recur across multiple windows). Drives the
+    # filter dropdowns and every per-player / per-Pokémon regulation list.
+    reg_latest: dict[str, str] = {}
+    for tid, reg in tournament_reg.items():
+        if not reg:
+            continue
+        d = tournaments[tid]["start_date"]
+        if reg not in reg_latest or d > reg_latest[reg]:
+            reg_latest[reg] = d
+    reg_order = sorted(reg_latest, key=lambda r: reg_latest[r], reverse=True)
+
     # Day-2 cut: the Swiss round at which the field is sharply reduced for the
     # second day. Detected as the first Swiss round whose participant count
     # drops to <=55% of the event's peak field (Day-1 attrition is gradual; the
@@ -201,7 +213,7 @@ def build_stats(conn: sqlite3.Connection, config: Config) -> dict[str, Any]:
         pid: _build_player(
             pid, players[pid], by_player[pid], tournaments, players,
             teams_by_player, team_pokemon, team_by_pt, pt_record,
-            tournament_reg, day2_start, config,
+            tournament_reg, day2_start, reg_order, config,
         )
         for pid in players
     }
@@ -232,7 +244,7 @@ def build_stats(conn: sqlite3.Connection, config: Config) -> dict[str, Any]:
 
     pokemon_profiles = _build_pokemon(
         teams, team_pokemon, pt_record, players, player_profiles,
-        tournaments, tournament_reg, config,
+        tournaments, tournament_reg, reg_order, config,
     )
 
     tournament_profiles = {
@@ -245,13 +257,6 @@ def build_stats(conn: sqlite3.Connection, config: Config) -> dict[str, Any]:
 
     records = _global_records(player_profiles, leaderboard, pokemon_profiles)
     seasons = sorted({t["season"] for t in tournaments.values()})
-
-    # Regulations present in the data, in the config's chronological order.
-    present = {r for r in tournament_reg.values() if r}
-    seen_regs: list[str] = []
-    for reg in config.regulations:
-        if reg["name"] in present and reg["name"] not in seen_regs:
-            seen_regs.append(reg["name"])
 
     return {
         "players": player_profiles,
@@ -266,7 +271,7 @@ def build_stats(conn: sqlite3.Connection, config: Config) -> dict[str, Any]:
         ),
         "records": records,
         "seasons": seasons,
-        "regulations": seen_regs,
+        "regulations": reg_order,
         "countries": countries,
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "config": config,
@@ -277,7 +282,7 @@ def build_stats(conn: sqlite3.Connection, config: Config) -> dict[str, Any]:
 
 def _build_player(
     pid, prow, pviews, tournaments, players, teams_by_player, team_pokemon,
-    team_by_pt, pt_record, tournament_reg, day2_start, config,
+    team_by_pt, pt_record, tournament_reg, day2_start, reg_order, config,
 ):
     decided = [v for v in pviews if not v["is_bye"] and v["won"] is not None]
     wins = sum(1 for v in decided if v["won"])
@@ -411,7 +416,6 @@ def _build_player(
             "wins": d["w"], "losses": d["l"], "events": d["events"],
             "win_rate": round(100 * d["w"] / tot, 1) if tot else None,
         })
-    reg_order = list(dict.fromkeys(r["name"] for r in config.regulations))
     reg_record.sort(key=lambda x: reg_order.index(x["regulation"])
                     if x["regulation"] in reg_order else 999)
 
@@ -516,7 +520,7 @@ def _decorate_match(v: dict, players: dict, tournaments: dict) -> dict | None:
 
 def _build_pokemon(
     teams, team_pokemon, pt_record, players, player_profiles, tournaments,
-    tournament_reg, config,
+    tournament_reg, reg_order, config,
 ):
     # Denominators = teams that actually published a list (overall + per reg).
     total_with_list = 0
@@ -539,8 +543,6 @@ def _build_pokemon(
         for tp in rows:
             tp["_moves"] = _safe_moves(tp.get("moves"))  # parse once
             species_entries[tp["species"]].append((t, reg, tp))
-
-    reg_order = list(dict.fromkeys(r["name"] for r in config.regulations))
 
     def panel(entries, denom, single_reg=False):
         """One regulation's view of a species: usage, win rate, sets, top users."""
