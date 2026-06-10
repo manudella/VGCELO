@@ -116,8 +116,9 @@ def announce(conn: sqlite3.Connection, config: Config, *, dry_run: bool = False,
         "ORDER BY start_date ASC")]
     pending = [t for t in majors if t["id"] not in announced]
 
-    # First-ever run: baseline the back-catalogue silently.
-    if not get_meta(conn, "announce_initialized"):
+    # First-ever run: baseline the back-catalogue silently. Skipped in dry-run
+    # so you can preview what *would* be posted.
+    if not dry_run and not get_meta(conn, "announce_initialized"):
         for t in majors:
             conn.execute("INSERT OR IGNORE INTO announced VALUES (?, ?)",
                          (t["id"], now))
