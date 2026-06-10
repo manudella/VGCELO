@@ -7,6 +7,8 @@
 site:
   title: "VGC Elo"
   tagline: "Competitive Pokémon VGC ratings from RK9 majors"
+  # Full canonical URL of the deployed site (used for social posts / absolute links).
+  url: "https://manudella.github.io/VGCELO"
   # Base URL the site is served from. For GitHub Pages project sites this is
   # "/<repo-name>"; for a custom domain / user site use "".
   base_url: "/VGCELO"

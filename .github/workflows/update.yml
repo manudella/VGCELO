@@ -67,6 +67,18 @@ jobs:
       - name: Scrape new majors, recompute ratings, fetch artwork, build site
         run: python -m vgcelo.cli update
 
+      # Posts a tweet for each newly-added major. No-ops if the X_* secrets
+      # aren't set, so this is safe even before you configure X. Never fails the
+      # deploy.
+      - name: Announce new majors on X
+        continue-on-error: true
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+        run: python -m vgcelo.cli announce
+
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v3
         with:

@@ -151,9 +151,31 @@ python -m vgcelo.cli serve
 ## Deployment
 
 For free, hands-off hosting that **auto-updates after every major**, see
-**[DEPLOY.md](DEPLOY.md)** — GitHub Pages + a scheduled GitHub Action.
+**[DEPLOY.md](DEPLOY.md)** — GitHub Pages + a scheduled GitHub Action. It also
+covers the optional **auto-post to X** that announces each new major.
+
+Live site: **https://manudella.github.io/VGCELO/**
 
 ---
 
-*Not affiliated with The Pokémon Company, Nintendo, or RK9. Pokémon and all
-related artwork are © their respective owners. This is a fan/statistics project.*
+## Contributing
+
+Contributions are welcome — bug fixes, new stats, design, data improvements, docs.
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for local setup and the PR workflow.
+Quick start:
+
+```bash
+git clone https://github.com/manudella/VGCELO.git
+cd VGCELO
+pip install -r requirements.txt
+python -m vgcelo.cli demo && python -m vgcelo.cli serve   # http://localhost:8000
+```
+
+Good first issues: normalising a Pokémon form, adding a country flag alias,
+adjusting a regulation window in `config.yaml`, or a stats/visual tweak.
+
+## License
+
+[MIT](LICENSE) © Manuel (manudella). Fan project — **not** affiliated with The
+Pokémon Company, Nintendo, Game Freak, or RK9. Pokémon and all related artwork
+are © their respective owners; tournament data comes from public results.

@@ -80,6 +80,13 @@ def _cmd_update(args, config):
     _cmd_build(args, config)
 
 
+def _cmd_announce(args, config):
+    from .notify import announce
+    with session(config.db_path) as conn:
+        res = announce(conn, config, dry_run=args.dry_run, max_posts=args.max)
+    print(f"Announce: {res}")
+
+
 def _cmd_serve(args, config):
     import functools
     import http.server
@@ -139,6 +146,11 @@ def main(argv=None):
     p.add_argument("--no-cache", action="store_true")
     p.add_argument("--force", action="store_true")
     p.set_defaults(func=_cmd_update)
+
+    p = sub.add_parser("announce", help="post newly-added majors to X (Twitter)")
+    p.add_argument("--dry-run", action="store_true", help="print tweets, don't post")
+    p.add_argument("--max", type=int, default=10, help="max posts per run")
+    p.set_defaults(func=_cmd_announce)
 
     p = sub.add_parser("serve", help="preview the built site")
     p.add_argument("--port", type=int, default=8000)

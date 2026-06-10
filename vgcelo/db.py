@@ -87,6 +87,12 @@ CREATE TABLE IF NOT EXISTS meta (
     value TEXT
 );
 
+-- Tournaments already announced on social, so we never post the same one twice.
+CREATE TABLE IF NOT EXISTS announced (
+    tournament_id TEXT PRIMARY KEY REFERENCES tournaments(id),
+    announced_at  TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_matches_seq    ON matches(seq);
 CREATE INDEX IF NOT EXISTS idx_matches_p1     ON matches(p1_id);
 CREATE INDEX IF NOT EXISTS idx_matches_p2     ON matches(p2_id);
