@@ -9,7 +9,7 @@ The schema is deliberately small and normalised:
 Elo is *not* stored as a single mutable number on the player. Instead every
 match records the rating of both players *before* and *after* it, in global
 chronological order (``matches.seq``). That makes the whole rating history
-reconstructable and powers rating charts, peak detection and "biggest upmatch".
+reconstructable and powers rating charts, peak detection and "biggest upset".
 """
 from __future__ import annotations
 

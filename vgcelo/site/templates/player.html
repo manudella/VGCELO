@@ -46,13 +46,14 @@
 <section class="section">
   <div class="grid cols-2">
     <div class="card">
-      <h3>Biggest upmatch</h3>
-      {% if player.biggest_upmatch %}
-        {% set u = player.biggest_upmatch %}
+      <h3>Biggest upset</h3>
+      {% if player.biggest_upset %}
+        {% set u = player.biggest_upset %}
         <p>Beat <a href="{{ url('player/' ~ u.opponent_id ~ '.html') }}">{{ u.opponent_name }}</a>
-          at <a href="{{ url('tournament/' ~ u.tournament_id ~ '.html') }}">{{ u.tournament_name }}</a>
-          {% if u.round %}(R{{ u.round }}){% endif %}
-          for {{ m.delta(u.delta) }} rating.</p>
+          (Elo {{ u.opp_rating }}) at
+          <a href="{{ url('tournament/' ~ u.tournament_id ~ '.html') }}">{{ u.tournament_name }}</a>
+          {% if u.round %}(R{{ u.round }}){% endif %} —
+          {{ m.delta(u.gap) }} Elo above them at the time.</p>
       {% else %}<p class="muted">No rated wins yet.</p>{% endif %}
     </div>
     <div class="card">

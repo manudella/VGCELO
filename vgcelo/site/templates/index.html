@@ -47,14 +47,14 @@
   <h2>Records</h2>
   <div class="grid cols-3">
     <div class="card">
-      <h3>Biggest upmatches</h3>
-      {% for p in records.biggest_upmatches[:6] %}
-        {% set u = p.biggest_upmatch %}
+      <h3>Biggest upsets</h3>
+      {% for p in records.biggest_upsets[:6] %}
+        {% set u = p.biggest_upset %}
         <div class="bar" style="grid-template-columns: 1fr auto;">
           <div><a href="{{ url('player/' ~ p.id ~ '.html') }}">{{ p.name }}</a>
             <span class="muted small">beat
             <a href="{{ url('player/' ~ u.opponent_id ~ '.html') }}">{{ u.opponent_name }}</a></span></div>
-          <div class="delta-pos">{{ m.delta(u.delta) }}</div>
+          <div class="delta-pos">{{ m.delta(u.gap) }}</div>
         </div>
       {% endfor %}
     </div>

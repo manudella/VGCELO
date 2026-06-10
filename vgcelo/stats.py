@@ -4,14 +4,14 @@ This turns the raw tables (tournaments / players / matches / team_pokemon) into
 fully-resolved profile dictionaries that the templates can render directly,
 with everything cross-linked. It is the analytical heart of the site:
 
-* per-player: rating + peak + tier, W/L, win streaks, biggest upmatch, average
+* per-player: rating + peak + tier, W/L, win streaks, biggest upset, average
   opponent rating, full tournament history with every opponent, and per-Pokémon
   usage & win-rate;
 * per-Pokémon: usage %, win-rate when on a team, set breakdowns (item / tera /
   ability / move / nature percentages — e.g. "% Choice Specs Flutter Mane"),
   and the top players who use it;
 * per-tournament: standings, pairings round-by-round, and event usage;
-* site-wide records: biggest upmatch ever, longest streak, highest peak, etc.
+* site-wide records: biggest upset ever, longest streak, highest peak, etc.
 
 Everything is computed in-memory in a couple of passes — fast enough for many
 seasons of majors, and simple to audit.
@@ -85,9 +85,11 @@ def _view(m: dict, side: str, bye: bool = False) -> dict:
     if side == "p1":
         pid, opp = m["p1_id"], m["p2_id"]
         before, after = m["p1_before"], m["p1_after"]
+        opp_before = m["p2_before"]
     else:
         pid, opp = m["p2_id"], m["p1_id"]
         before, after = m["p2_before"], m["p2_after"]
+        opp_before = m["p1_before"]
     if bye:
         won = None  # not counted in rate
     elif m["winner_id"] is None:
@@ -101,6 +103,7 @@ def _view(m: dict, side: str, bye: bool = False) -> dict:
         "opp": opp,
         "before": before,
         "after": after,
+        "opp_before": opp_before,
         "delta": (after - before) if (after is not None and before is not None) else 0.0,
         "won": won,
         "is_bye": bye,
@@ -289,13 +292,17 @@ def _build_player(
     longest_win = _longest(decided, True)
     longest_loss = _longest(decided, False)
 
-    # Biggest upmatch = won match with the largest Elo gain (beat a far
-    # higher-rated opponent).
-    upmatch = None
+    # Biggest upset = the win against the opponent who was rated highest *above*
+    # the player going into the match (largest pre-match Elo gap overcome).
+    upset = None
+    upset_gap = None
     for v in decided:
-        if v["won"] and (upmatch is None or v["delta"] > upmatch["delta"]):
-            upmatch = v
-    biggest_upmatch = _decorate_match(upmatch, players, tournaments) if upmatch else None
+        if not v["won"] or v["before"] is None or v["opp_before"] is None:
+            continue
+        gap = v["opp_before"] - v["before"]
+        if upset is None or gap > upset_gap:
+            upset, upset_gap = v, gap
+    biggest_upset = _decorate_match(upset, players, tournaments) if upset else None
 
     # Worst loss (largest rating drop)
     worst = None
@@ -426,7 +433,7 @@ def _build_player(
         "best_placement": best_placement,
         "longest_win_streak": longest_win,
         "longest_loss_streak": longest_loss,
-        "biggest_upmatch": biggest_upmatch,
+        "biggest_upset": biggest_upset,
         "worst_loss": worst_loss,
         "rating_history": history,
         "tournament_history": tourn_hist,
@@ -452,6 +459,9 @@ def _decorate_match(v: dict, players: dict, tournaments: dict) -> dict | None:
         return None
     opp = v["opp"]
     t = tournaments[v["tournament_id"]]
+    own_before = v["before"]
+    opp_before = v.get("opp_before")
+    gap = (opp_before - own_before) if (opp_before is not None and own_before is not None) else None
     return {
         "opponent_id": opp,
         "opponent_name": players[opp]["name"] if opp else "Bye",
@@ -460,7 +470,9 @@ def _decorate_match(v: dict, players: dict, tournaments: dict) -> dict | None:
         "round": v["round"],
         "phase": v["phase"],
         "delta": round(v["delta"], 1),
-        "rating_before": round(v["before"], 1) if v["before"] is not None else None,
+        "rating_before": round(own_before, 1) if own_before is not None else None,
+        "opp_rating": round(opp_before, 1) if opp_before is not None else None,
+        "gap": round(gap, 1) if gap is not None else None,
     }
 
 
@@ -693,9 +705,9 @@ def _global_records(player_profiles, leaderboard, pokemon_profiles):
         pool = [p for p in active if (filt(p) if filt else True)]
         return sorted(pool, key=key, reverse=reverse)[:n]
 
-    biggest_upmatches = sorted(
-        (p for p in active if p["biggest_upmatch"]),
-        key=lambda p: p["biggest_upmatch"]["delta"], reverse=True,
+    biggest_upsets = sorted(
+        (p for p in active if p["biggest_upset"] and p["biggest_upset"]["gap"] is not None),
+        key=lambda p: p["biggest_upset"]["gap"], reverse=True,
     )[:10]
 
     return {
@@ -707,7 +719,7 @@ def _global_records(player_profiles, leaderboard, pokemon_profiles):
             [p for p in active if p["games"] >= 20],
             key=lambda p: p["win_rate"], reverse=True,
         )[:10],
-        "biggest_upmatches": biggest_upmatches,
+        "biggest_upsets": biggest_upsets,
         "most_used_pokemon": sorted(
             pokemon_profiles.values(), key=lambda p: p["usage_count"], reverse=True
         )[:10],

@@ -51,6 +51,7 @@
     const countEl = document.getElementById("ladder-count");
     const PAGE = 100;
     let all = [], view = [], page = 0;
+    let sortCol = 0, sortDir = "asc";   // default: by rank (= Elo) ascending
 
     const cell = (v) => (v === "" || v === null ? "—" : v);
     function flag(cc) {
@@ -88,16 +89,43 @@
       if (pv) pv.onclick = () => { if (page > 0) { page--; renderPage(); window.scrollTo(0, 0); } };
       if (nx) nx.onclick = () => { if (page < pages - 1) { page++; renderPage(); window.scrollTo(0, 0); } };
     }
+    function sortView() {
+      view.sort(function (a, b) {
+        if (sortCol === 0) return sortDir === "asc" ? a[0] - b[0] : b[0] - a[0];
+        var av = parseFloat(a[sortCol]); if (isNaN(av)) av = -Infinity;
+        var bv = parseFloat(b[sortCol]); if (isNaN(bv)) bv = -Infinity;
+        if (av === bv) return a[0] - b[0];               // tiebreak by rank
+        return sortDir === "asc" ? av - bv : bv - av;
+      });
+    }
     function applyFilters() {
       const c = cf ? cf.value : "";
       const q = sf ? sf.value.trim().toLowerCase() : "";
       view = all.filter((r) => (!c || r[3] === c) && (!q || r[2].toLowerCase().indexOf(q) !== -1));
+      sortView();
       page = 0;
       renderPage();
     }
+    function wireHeaders() {
+      const ths = document.querySelectorAll("#ladder thead th[data-sort]");
+      ths.forEach(function (th) {
+        if (!th.dataset.label) th.dataset.label = th.textContent.trim();
+        th.style.cursor = "pointer";
+        th.title = "Click to sort";
+        th.addEventListener("click", function () {
+          const col = parseInt(th.dataset.sort, 10);
+          if (col === sortCol) sortDir = sortDir === "asc" ? "desc" : "asc";
+          else { sortCol = col; sortDir = (col === 0) ? "asc" : "desc"; }
+          ths.forEach((o) => { o.textContent = o.dataset.label; });
+          th.textContent = th.dataset.label + (sortDir === "asc" ? " ▲" : " ▼");
+          sortView(); page = 0; renderPage();
+        });
+      });
+    }
     fetch(window.LADDER_URL).then((r) => r.json()).then((data) => {
-      all = view = data;
+      all = data; view = data.slice();
       renderPage();
+      wireHeaders();
       if (cf) cf.addEventListener("change", applyFilters);
       if (sf) sf.addEventListener("input", applyFilters);
     }).catch(() => { body.innerHTML = '<tr><td colspan="10" class="muted">Failed to load ladder.</td></tr>'; });
