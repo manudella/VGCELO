@@ -24,7 +24,7 @@ import json
 import re
 from collections import Counter
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from dateutil import parser as dateparser
 
@@ -48,6 +48,7 @@ class EventMeta:
     code: str
     name: str
     start_date: str
+    end_date: str
     tier: str
     season: int
 
@@ -70,15 +71,28 @@ def season_for(date_iso: str) -> int:
     return d.year + 1 if d.month >= 9 else d.year
 
 
-def _parse_date(text: str) -> str | None:
-    m = _DATE_RE.search(text)
+def _parse_date_range(text: str) -> tuple[str | None, str | None]:
+    """(start, end) ISO dates from text like 'May 29-31, 2026' or 'June 6, 2026'."""
+    m = re.search(
+        r"([A-Z][a-z]+\.?)\s+(\d{1,2})(?:\s*[-–]\s*(\d{1,2}))?,\s*(\d{4})", text)
     if not m:
-        return None
-    raw = re.sub(r"\s*[-–]\s*\d{1,2}", "", m.group(1))  # range -> first day
+        return None, None
+    month, d1, d2, year = m.group(1), m.group(2), m.group(3), m.group(4)
     try:
-        return dateparser.parse(raw).strftime("%Y-%m-%d")
+        start = dateparser.parse(f"{month} {d1}, {year}")
     except (ValueError, OverflowError):
-        return None
+        return None, None
+    start_iso = start.strftime("%Y-%m-%d")
+    end_iso = start_iso
+    if d2:
+        try:
+            end = dateparser.parse(f"{month} {d2}, {year}")
+            end_iso = end.strftime("%Y-%m-%d")
+            if end_iso < start_iso:            # cross-month range -> safe fallback
+                end_iso = (start + timedelta(days=2)).strftime("%Y-%m-%d")
+        except (ValueError, OverflowError):
+            end_iso = (start + timedelta(days=2)).strftime("%Y-%m-%d")
+    return start_iso, end_iso
 
 
 def discover(client: RK9Client, host: str, *, min_tier: str, first_season: int,
@@ -89,18 +103,18 @@ def discover(client: RK9Client, host: str, *, min_tier: str, first_season: int,
     out: list[EventMeta] = []
     for code, raw in _EVENT_RE.findall(html):
         text = re.sub(r"\s+", " ", raw).strip()
-        date_iso = _parse_date(text)
-        if not date_iso:
+        start_iso, end_iso = _parse_date_range(text)
+        if not start_iso:
             continue
         name = text.split(" - ")[0].strip() if " - " in text else text
         tier = classify_tier(name)
         if not tier or TIER_ORDER[tier] < min_rank:
             continue
-        season = season_for(date_iso)
+        season = season_for(start_iso)
         if season < first_season:
             continue
-        out.append(EventMeta(code=code, name=name, start_date=date_iso,
-                             tier=tier, season=season))
+        out.append(EventMeta(code=code, name=name, start_date=start_iso,
+                             end_date=end_iso, tier=tier, season=season))
     return sorted(out, key=lambda e: e.start_date)
 
 
@@ -140,10 +154,21 @@ def scrape_all(conn, config: Config, *, refresh: bool = False,
     existing = ({r["id"] for r in conn.execute("SELECT id FROM tournaments")}
                 if not refresh else set())
 
+    # pokedata posts results live (round by round). Only ingest an event once it
+    # is finished, i.e. the current date is past its last day — otherwise we'd
+    # store a half-played tournament (and announce a non-final "winner"). The
+    # event is simply picked up on a later run once it's over.
+    today = date.today().isoformat()
+
     processed = 0
+    skipped_live = 0
     for meta in metas:
         tid = f"pd-{meta.code}"
         if tid in existing:
+            continue
+        if meta.end_date and today <= meta.end_date:
+            skipped_live += 1
+            print(f"  ~ not finished, skipping: {meta.name} (ends {meta.end_date})")
             continue
         if limit is not None and processed >= limit:
             break
@@ -157,7 +182,8 @@ def scrape_all(conn, config: Config, *, refresh: bool = False,
 
     set_meta(conn, "last_scrape", datetime.now(timezone.utc).isoformat())
     conn.commit()
-    return {"discovered": len(metas), "ingested": processed}
+    return {"discovered": len(metas), "ingested": processed,
+            "skipped_in_progress": skipped_live}
 
 
 def _ingest_event(conn, client, host, meta: EventMeta, tid: str, *,
@@ -177,7 +203,7 @@ def _ingest_event(conn, client, host, meta: EventMeta, tid: str, *,
              start_date=excluded.start_date, tier=excluded.tier,
              season=excluded.season, attendance=excluded.attendance,
              scraped_at=excluded.scraped_at""",
-        (tid, meta.name, meta.start_date, meta.start_date, None, None,
+        (tid, meta.name, meta.start_date, meta.end_date, None, None,
          meta.tier, meta.season, len(players), fmt,
          f"{host}/standingsVGC/{meta.code}/masters/",
          datetime.now(timezone.utc).isoformat()),
