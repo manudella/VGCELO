@@ -59,13 +59,14 @@
       var fc = cc.toLowerCase() === "uk" ? "gb" : cc.toLowerCase();
       return '<img class="flag" loading="lazy" alt="' + cc + '" src="https://flagcdn.com/24x18/' + fc + '.png">';
     }
-    // row: [rank,id,name,cc,elo,gxe,glicko,rd,wins,losses,winrate,events,best,tier]
+    // row: [rank,id,name,cc,elo,gxe,glicko,rd,wins,losses,winrate,events,best,tier,peak]
     function rowHtml(r) {
       const t = r[13];
       return '<tr class="row-' + t + '">' +
         '<td class="rank t-' + t + '">' + r[0] + "</td>" +
         '<td>' + flag(r[3]) + '<a href="' + base + "player/" + r[1] + '.html">' + r[2] + "</a></td>" +
         '<td class="num rating t-' + t + '">' + r[4] + "</td>" +
+        '<td class="num muted">' + cell(r[14]) + "</td>" +
         '<td class="num">' + cell(r[5]) + "</td>" +
         '<td class="num muted">' + cell(r[6]) + "</td>" +
         '<td class="num muted small">' + (r[7] === "" ? "—" : "±" + r[7]) + "</td>" +
@@ -78,7 +79,7 @@
       const start = page * PAGE;
       const slice = view.slice(start, start + PAGE);
       body.innerHTML = slice.length ? slice.map(rowHtml).join("")
-        : '<tr><td colspan="10" class="muted">No players match.</td></tr>';
+        : '<tr><td colspan="11" class="muted">No players match.</td></tr>';
       const pages = Math.max(1, Math.ceil(view.length / PAGE));
       countEl.textContent = view.length.toLocaleString() + " players";
       pager.innerHTML =
@@ -128,7 +129,7 @@
       wireHeaders();
       if (cf) cf.addEventListener("change", applyFilters);
       if (sf) sf.addEventListener("input", applyFilters);
-    }).catch(() => { body.innerHTML = '<tr><td colspan="10" class="muted">Failed to load ladder.</td></tr>'; });
+    }).catch(() => { body.innerHTML = '<tr><td colspan="11" class="muted">Failed to load ladder.</td></tr>'; });
   }
 
   // ---- pokemon usage index (filterable by regulation) --------------------

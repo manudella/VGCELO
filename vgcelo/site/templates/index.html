@@ -20,7 +20,7 @@
   <table class="table">
     <thead>
       <tr><th class="rank">#</th><th>Player</th>
-          <th class="num">Elo</th><th class="num">GXE</th><th class="num">Glicko</th>
+          <th class="num">Elo</th><th class="num">Peak</th><th class="num">GXE</th><th class="num">Glicko</th>
           <th class="num">W–L</th><th class="num">Win%</th><th class="num">Events</th></tr>
     </thead>
     <tbody>
@@ -30,6 +30,7 @@
         <td>{{ m.flag(p.country) }}
             <a href="{{ url('player/' ~ p.id ~ '.html') }}">{{ p.name }}</a></td>
         <td class="num rating t-{{ p.tier.key }}">{{ p.current_rating }}</td>
+        <td class="num muted">{{ p.peak_rating }}</td>
         <td class="num">{{ p.gxe if p.gxe is not none else '—' }}</td>
         <td class="num muted">{{ p.glicko if p.glicko is not none else '—' }}</td>
         <td class="num">{{ p.wins }}–{{ p.losses }}</td>

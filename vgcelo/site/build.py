@@ -118,7 +118,7 @@ def build_site(stats: dict, config: Config) -> Path:
          p["glicko"] if p["glicko"] is not None else "",
          p["rd"] if p["rd"] is not None else "",
          p["wins"], p["losses"], p["win_rate"], p["tournaments_played"],
-         p["best_placement"] or "", p["tier"]["key"]]
+         p["best_placement"] or "", p["tier"]["key"], p["peak_rating"]]
         for p in stats["leaderboard"]
     ]
     (out / "ladder.json").write_text(json.dumps(ladder), encoding="utf-8")
