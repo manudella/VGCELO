@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import re
 import shutil
+from datetime import datetime, timezone
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -49,6 +50,10 @@ def build_site(stats: dict, config: Config) -> Path:
         trim_blocks=True,
         lstrip_blocks=True,
     )
+    # Changes every build, so browsers fetch fresh CSS/JS/JSON after each deploy
+    # instead of serving stale cached copies.
+    asset_version = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+
     env.globals.update(
         site=config.site,
         url=url,
@@ -56,6 +61,7 @@ def build_site(stats: dict, config: Config) -> Path:
         seasons=stats["seasons"],
         tier_meta={t["key"]: t for t in config.tiers},
         regulations=stats["regulations"],
+        asset_version=asset_version,
     )
     env.filters["sign"] = lambda v: (f"+{v}" if v and v > 0 else str(v))
 

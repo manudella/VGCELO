@@ -30,5 +30,5 @@ what was used when.</p>
 </table>
 </div>
 
-<script>window.POKEMON_URL = "{{ url('pokemon.json') }}";</script>
+<script>window.POKEMON_URL = "{{ url('pokemon.json') }}?v={{ asset_version }}";</script>
 {% endblock %}

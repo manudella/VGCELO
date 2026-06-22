@@ -34,5 +34,5 @@
 
 <div class="pager" id="ladder-pager"></div>
 
-<script>window.LADDER_URL = "{{ url('ladder.json') }}";</script>
+<script>window.LADDER_URL = "{{ url('ladder.json') }}?v={{ asset_version }}";</script>
 {% endblock %}
