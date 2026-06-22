@@ -107,7 +107,11 @@ def discover(client: RK9Client, host: str, *, min_tier: str, first_season: int,
              use_cache: bool = True) -> list[EventMeta]:
     from .tournaments import TIER_ORDER
     min_rank = TIER_ORDER[min_tier]
-    html = client.get(f"{host}/standingsVGC/", use_cache=use_cache)
+    # The event index is a LIVE listing — always fetch it fresh, never from the
+    # cache. (Per-event JSONs are immutable once finished and may be cached, but
+    # a cached index would freeze discovery and new tournaments would never be
+    # found — which silently breaks the whole auto-update.)
+    html = client.get(f"{host}/standingsVGC/", use_cache=False)
     out: list[EventMeta] = []
     for code, raw in _EVENT_RE.findall(html):
         text = re.sub(r"\s+", " ", raw).strip()

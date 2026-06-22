@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from .config import Config
 from .db import get_meta, set_meta
@@ -103,7 +103,7 @@ def _compose(t: dict, winner: str | None, regulation: str | None,
 # -- main ---------------------------------------------------------------------
 
 def announce(conn: sqlite3.Connection, config: Config, *, dry_run: bool = False,
-             max_posts: int = 10) -> dict:
+             max_posts: int = 10, fresh_days: int = 14) -> dict:
     creds = _credentials()
     if creds is None and not dry_run:
         return {"skipped": "no X credentials set"}
@@ -112,7 +112,7 @@ def announce(conn: sqlite3.Connection, config: Config, *, dry_run: bool = False,
     announced = {r["tournament_id"]
                  for r in conn.execute("SELECT tournament_id FROM announced")}
     majors = [dict(r) for r in conn.execute(
-        "SELECT id, name, start_date, attendance FROM tournaments "
+        "SELECT id, name, start_date, end_date, attendance FROM tournaments "
         "ORDER BY start_date ASC")]
     pending = [t for t in majors if t["id"] not in announced]
 
@@ -129,9 +129,22 @@ def announce(conn: sqlite3.Connection, config: Config, *, dry_run: bool = False,
     if not pending:
         return {"posted": 0, "pending": 0}
 
+    # Only tweet events that finished recently. Older un-announced events (e.g. a
+    # backlog ingested late, or a recovered/older event) are marked announced
+    # silently so we never dump stale "🆕" posts.
+    cutoff = (date.today() - timedelta(days=fresh_days)).isoformat()
     site_url = config.site.get("url", "")
-    posted, errors = 0, []
-    for t in pending[:max_posts]:
+    posted, stale, errors = 0, 0, []
+    for t in pending:
+        end = t.get("end_date") or t["start_date"]
+        if end < cutoff:                       # too old to announce -> silence it
+            if not dry_run:
+                conn.execute("INSERT OR IGNORE INTO announced VALUES (?, ?)",
+                             (t["id"], now))
+            stale += 1
+            continue
+        if posted >= max_posts:
+            break
         text = _compose(t, _winner(conn, t["id"]),
                         _regulation(conn, config, t["id"], t["start_date"]),
                         site_url)
@@ -149,5 +162,8 @@ def announce(conn: sqlite3.Connection, config: Config, *, dry_run: bool = False,
         else:
             errors.append(f"{t['name']}: {info}")
             print(f"  ! failed: {t['name']}: {info}")
+    if not dry_run:
+        conn.commit()
 
-    return {"posted": posted, "pending": len(pending), "errors": errors}
+    return {"posted": posted, "silenced_old": stale,
+            "pending": len(pending), "errors": errors}
