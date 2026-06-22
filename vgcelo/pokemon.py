@@ -42,6 +42,10 @@ FORM_MAP: dict[str, str] = {
     "tauros-paldea-combat": "tauros-paldea-combat-breed",
     "tauros-paldea-blaze": "tauros-paldea-blaze-breed",
     "tauros-paldea-aqua": "tauros-paldea-aqua-breed",
+    # Tauros Paldean breeds as the data actually spells them ("paldean").
+    "tauros-paldean-combat": "tauros-paldea-combat-breed",
+    "tauros-paldean-blaze": "tauros-paldea-blaze-breed",
+    "tauros-paldean-aqua": "tauros-paldea-aqua-breed",
     "tatsugiri": "tatsugiri-curly",
     "maushold": "maushold-family-of-four",
     "palafin": "palafin-zero",
@@ -50,6 +54,25 @@ FORM_MAP: dict[str, str] = {
     "lycanroc": "lycanroc-midday",
     "basculegion": "basculegion-male",
     "toxtricity": "toxtricity-amped",
+    # Pokémon whose bare species name 404s on PokeAPI (their default "form" has
+    # its own resource name) — map to the standard battle form's artwork.
+    "aegislash": "aegislash-shield",
+    "mimikyu": "mimikyu-disguised",
+    "eiscue": "eiscue-ice",
+    "morpeko": "morpeko-full-belly",
+    "darmanitan": "darmanitan-standard",
+    "meowstic": "meowstic-male",
+    "wishiwashi": "wishiwashi-solo",
+    "oricorio": "oricorio-baile",
+    "squawkabilly": "squawkabilly-green-plumage",
+}
+
+# Regional-form adjectives (as the data spells them) -> PokeAPI's region suffix.
+_REGION_SUFFIX = {
+    "galarian": "galar",
+    "hisuian": "hisui",
+    "alolan": "alola",
+    "paldean": "paldea",
 }
 
 # Common raw -> display fixups for separators RK9/Showdown use.
@@ -140,6 +163,10 @@ def pokeapi_name(display: str) -> str:
     slug = image_slug(display)
     if slug in FORM_MAP:
         return FORM_MAP[slug]
-    # Drop a trailing parenthetical that slugify already flattened, e.g.
-    # "ogerpon-hearthflame" was produced from "Ogerpon (Hearthflame)".
+    # Regional forms: the data says "-galarian/-hisuian/-alolan/-paldean" but
+    # PokeAPI uses "-galar/-hisui/-alola/-paldea". Without this they 404 and the
+    # downloader falls back to the *base* species' (wrong) artwork.
+    for adj, suffix in _REGION_SUFFIX.items():
+        if adj in slug:
+            return slug.replace(adj, suffix)
     return slug
