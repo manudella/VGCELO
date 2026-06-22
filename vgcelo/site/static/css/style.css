@@ -220,6 +220,36 @@ footer { padding: 40px 0; color: var(--ink-soft); font-size: .85rem; border-top:
 .filter-bar input { padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px;
   font: inherit; margin-left: 8px; }
 
+/* ---- "On this page" side menu ------------------------------------------- */
+.page-main { min-width: 0; }                 /* allow grid child to shrink */
+.wrap.has-toc {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 210px;
+  gap: 36px;
+  align-items: start;
+  max-width: 1220px;
+}
+.page-main > section[id], .page-main > .card[id] { scroll-margin-top: 78px; }
+.page-toc { position: sticky; top: 80px; }
+.toc { display: flex; flex-direction: column; gap: 2px; font-size: .9rem; }
+.toc-title { font-size: .7rem; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--ink-soft); font-weight: 800; margin-bottom: 8px; padding-left: 11px; }
+.toc a {
+  color: var(--ink-soft); text-decoration: none; line-height: 1.25;
+  padding: 6px 10px; border-left: 3px solid var(--line); border-radius: 0 7px 7px 0;
+}
+.toc a:hover { color: var(--ink); background: var(--bg); }
+.toc a.active {
+  color: var(--master-purple); font-weight: 700;
+  border-left-color: var(--master-purple); background: #f3f0fb;
+}
+
+/* No room for the side menu on narrow screens -> single column, menu hidden. */
+@media (max-width: 1000px) {
+  .wrap.has-toc { display: block; max-width: var(--maxw); }
+  .page-toc { display: none; }
+}
+
 /* =============================================================================
    Mobile (≤640px). Desktop layout above is untouched — everything here is
    inside media queries so it only applies to small screens.

@@ -6,7 +6,7 @@
 <div class="breadcrumb"><a href="{{ url('index.html') }}">Home</a> /
   <a href="{{ url('tournaments.html') }}">Tournaments</a> / {{ t.name }}</div>
 
-<div class="card">
+<div class="card" data-toc="Overview">
   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
     <h1 style="margin:0">{{ t.name }}</h1>
     {{ m.tier_tag(t.tier) }}
@@ -21,7 +21,7 @@
   </div>
 </div>
 
-<section class="section">
+<section class="section" data-toc="Usage">
   <h2>Most-used Pokémon here</h2>
   <div class="grid cols-4">
     {% for pk in t.top_usage %}
@@ -34,7 +34,7 @@
   </div>
 </section>
 
-<section class="section">
+<section class="section" data-toc="Standings">
   <h2>Standings</h2>
   <div class="scroll-x">
   <table class="table">
@@ -62,8 +62,8 @@
   </div>
 </section>
 
-<section class="section">
-  {% set topcut = t.rounds | selectattr('phase', 'equalto', 'top_cut') | list %}
+{% set topcut = t.rounds | selectattr('phase', 'equalto', 'top_cut') | list %}
+<section class="section"{% if topcut %} data-toc="Top cut"{% endif %}>
   {% if topcut %}
   <h2>Top cut</h2>
   <p class="muted small">Full round-by-round results for every player are on each

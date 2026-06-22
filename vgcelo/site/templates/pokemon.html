@@ -6,7 +6,7 @@
 <div class="breadcrumb"><a href="{{ url('index.html') }}">Home</a> /
   <a href="{{ url('pokemon.html') }}">Pokémon</a> / {{ mon.species }}</div>
 
-<div class="card">
+<div class="card" data-toc="Overview">
   <div class="profile-head">
     {{ m.poke_img(mon.image, mon.species, 'lg') }}
     <div>
@@ -24,12 +24,12 @@
   </div>
 </div>
 
-<section class="section">
+<section class="section" data-toc="Sets">
   <h2>Sets</h2>
   <div class="grid cols-2" id="mon-sets"></div>
 </section>
 
-<section class="section">
+<section class="section" data-toc="Best players">
   <h2>Best players <span class="muted small">— most wins with {{ mon.species }}</span></h2>
   <div class="card">
     <table class="table"><tbody id="mon-top"></tbody></table>

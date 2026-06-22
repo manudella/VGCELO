@@ -232,6 +232,49 @@
     render("all");
   }
 
+  // ---- "On this page" side menu (auto-generated + scrollspy) --------------
+  const tocNav = document.getElementById("toc");
+  const pageMain = document.querySelector(".page-main");
+  if (tocNav && pageMain) {
+    const blocks = pageMain.querySelectorAll(":scope > section, :scope > .card");
+    const items = [];
+    let n = 0;
+    blocks.forEach(function (el) {
+      let label = el.getAttribute("data-toc");
+      if (!label) {
+        const h = el.querySelector("h2");
+        if (h) label = h.textContent.trim();
+      }
+      if (!label) return;
+      if (!el.id) el.id = "sec-" + (++n);
+      items.push({ el: el, id: el.id, label: label });
+    });
+    const aside = tocNav.closest(".page-toc");
+    if (items.length < 2) {
+      if (aside) aside.style.display = "none";
+    } else {
+      tocNav.innerHTML = '<div class="toc-title">On this page</div>' +
+        items.map(function (it) {
+          return '<a href="#' + it.id + '" data-for="' + it.id + '">' + it.label + "</a>";
+        }).join("");
+      const links = {};
+      tocNav.querySelectorAll("a").forEach(function (a) {
+        links[a.getAttribute("data-for")] = a;
+      });
+      const setActive = function (id) {
+        Object.keys(links).forEach(function (k) { links[k].classList.remove("active"); });
+        if (links[id]) links[id].classList.add("active");
+      };
+      const obs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) setActive(e.target.id);
+        });
+      }, { rootMargin: "-72px 0px -68% 0px", threshold: 0 });
+      items.forEach(function (it) { obs.observe(it.el); });
+      setActive(items[0].id);
+    }
+  }
+
   // ---- sparklines ---------------------------------------------------------
   document.querySelectorAll("[data-spark]").forEach(function (el) {
     let pts;

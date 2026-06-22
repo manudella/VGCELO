@@ -80,19 +80,19 @@ def build_site(stats: dict, config: Config) -> Path:
            countries=stats["countries"])
 
     for p in stats["players"].values():
-        render("player.html", f"player/{p['id']}.html", player=p,
+        render("player.html", f"player/{p['id']}.html", player=p, page_toc=True,
                history_json=json.dumps([h["rating"] for h in p["rating_history"]]))
 
     render("pokemon_index.html", "pokemon.html", pokemon=stats["pokemon_list"])
     for pk in stats["pokemon"].values():
-        render("pokemon.html", f"pokemon/{pk['slug']}.html", mon=pk)
+        render("pokemon.html", f"pokemon/{pk['slug']}.html", mon=pk, page_toc=True)
 
     render("tournament_index.html", "tournaments.html",
            tournaments=stats["tournament_list"])
     for t in stats["tournaments"].values():
-        render("tournament.html", f"tournament/{t['id']}.html", t=t)
+        render("tournament.html", f"tournament/{t['id']}.html", t=t, page_toc=True)
 
-    render("methodology.html", "methodology.html", config=config)
+    render("methodology.html", "methodology.html", config=config, page_toc=True)
 
     # -- search index ---------------------------------------------------------
     search = [

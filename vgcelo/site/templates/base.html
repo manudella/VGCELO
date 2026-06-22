@@ -31,8 +31,13 @@
 
   {% block hero %}{% endblock %}
 
-  <main class="wrap">
+  <main class="wrap{% if page_toc|default(false) %} has-toc{% endif %}">
+    <div class="page-main">
     {% block content %}{% endblock %}
+    </div>
+    {% if page_toc|default(false) %}
+    <aside class="page-toc"><nav class="toc" id="toc" aria-label="On this page"></nav></aside>
+    {% endif %}
   </main>
 
   <footer>

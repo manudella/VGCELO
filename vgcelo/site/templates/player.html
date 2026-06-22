@@ -6,7 +6,7 @@
 <div class="breadcrumb"><a href="{{ url('index.html') }}">Home</a> /
   <a href="{{ url('players.html') }}">Players</a> / {{ player.name }}</div>
 
-<div class="card">
+<div class="card" data-toc="Overview">
   <div class="profile-head">
     <div>
       <h1 style="margin-bottom:.1em">{{ m.flag(player.country) }} {{ player.name }}</h1>
@@ -28,7 +28,7 @@
   {% endif %}
 </div>
 
-<section class="section">
+<section class="section" data-toc="Stats">
   <div class="stat-grid">
     <div class="stat"><div class="v">{{ player.gxe if player.gxe is not none else '—' }}</div><div class="k">GXE</div></div>
     <div class="stat"><div class="v">{{ player.glicko if player.glicko is not none else '—' }}<span class="muted small"> ±{{ player.rd }}</span></div><div class="k">Glicko-2</div></div>
@@ -45,7 +45,7 @@
   </div>
 </section>
 
-<section class="section">
+<section class="section" data-toc="Highlights">
   <div class="grid cols-2">
     <div class="card">
       <h3>Biggest upset</h3>
@@ -72,7 +72,7 @@
 </section>
 
 {% if player.reg_record %}
-<section class="section">
+<section class="section" data-toc="Regulations">
   <h2>Record by regulation</h2>
   <div class="scroll-x">
   <table class="table">
@@ -91,7 +91,7 @@
 </section>
 {% endif %}
 
-<section class="section">
+<section class="section" data-toc="Pokémon">
   <h2>Pokémon used</h2>
   <div class="scroll-x">
   <table class="table">
@@ -111,7 +111,7 @@
   </div>
 </section>
 
-<section class="section">
+<section class="section" data-toc="Tournaments">
   <h2>Tournament history</h2>
   {% for th in player.tournament_history %}
   <div class="card" style="margin-bottom:16px">
