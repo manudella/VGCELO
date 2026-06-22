@@ -27,7 +27,7 @@ from typing import Any
 
 from .config import Config
 from .glicko import compute_glicko
-from .pokemon import image_filename, image_slug
+from .pokemon import image_filename, image_slug, to_showdown
 
 # Map non-ISO country codes the source uses to ISO 3166-1 alpha-2 (what flag
 # images expect). pokedata tags the United Kingdom as "UK"; the ISO code is "GB".
@@ -377,11 +377,19 @@ def _build_player(
             ra["w"] += rec["w"]
             ra["l"] += rec["l"]
             ra["events"] += 1
+        team_rows = sorted(team_pokemon.get(tm["id"], []), key=lambda x: x["slot"] or 0)
         team = [
             {"species": tp["species"], "slug": image_slug(tp["species"]),
              "image": image_filename(tp["species"])}
-            for tp in sorted(team_pokemon.get(tm["id"], []), key=lambda x: x["slot"] or 0)
+            for tp in team_rows
         ]
+        # Showdown/PokePaste export of the team (empty when no list was published).
+        pokepaste = to_showdown([
+            {"species": tp["species"], "item": tp.get("item"),
+             "ability": tp.get("ability"), "tera_type": tp.get("tera_type"),
+             "nature": tp.get("nature"), "moves": _safe_moves(tp.get("moves"))}
+            for tp in team_rows
+        ]) if team_rows else ""
         tmatches = []
         for v in sorted(matches_by_t[tid], key=lambda x: (x["seq"])):
             opp = v["opp"]
@@ -405,6 +413,7 @@ def _build_player(
             "placement": tm["placement"],
             "record": f"{rec['w']}-{rec['l']}" + (f"-{rec['t']}" if rec["t"] else ""),
             "team": team,
+            "pokepaste": pokepaste,
             "matches": tmatches,
         })
 

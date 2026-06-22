@@ -158,6 +158,57 @@ def image_filename(display: str) -> str:
     return f"{image_slug(display)}.png"
 
 
+# Display-form words -> Pokémon Showdown's species-name suffixes.
+_SHOWDOWN_FORM = {
+    "galarian": "Galar", "hisuian": "Hisui", "alolan": "Alola",
+    "paldean": "Paldea", "female": "F", "male": "M",
+}
+
+
+def showdown_name(display: str) -> str:
+    """Convert a display name to Pokémon Showdown's species name.
+
+    "Urshifu (Rapid Strike)" -> "Urshifu-Rapid-Strike";
+    "Slowking (Galarian)" -> "Slowking-Galar";
+    "Tornadus (Incarnate)" -> "Tornadus".
+    """
+    m = re.match(r"^(.*?)\s*\((.*)\)\s*$", display)
+    if not m:
+        return display
+    base, form = m.group(1).strip(), m.group(2).strip()
+    parts = []
+    for w in form.replace("-", " ").split():
+        lw = w.lower()
+        if lw == "incarnate":          # Showdown's base form has no suffix
+            continue
+        parts.append(_SHOWDOWN_FORM.get(lw, w.capitalize()))
+    return "-".join([base] + parts) if parts else base
+
+
+def to_showdown(mons: list[dict]) -> str:
+    """Build a Pokémon Showdown / PokePaste team export from team rows.
+
+    EVs and IVs aren't in the source, so they're omitted; Tera (SV) or nature
+    (Champions) is included when known.
+    """
+    blocks = []
+    for mon in mons:
+        head = showdown_name(mon["species"])
+        if mon.get("item"):
+            head += " @ " + mon["item"]
+        lines = [head]
+        if mon.get("ability"):
+            lines.append("Ability: " + mon["ability"])
+        if mon.get("tera_type"):
+            lines.append("Tera Type: " + mon["tera_type"])
+        if mon.get("nature"):
+            lines.append(mon["nature"] + " Nature")
+        for mv in (mon.get("moves") or []):
+            lines.append("- " + mv)
+        blocks.append("\n".join(lines))
+    return "\n\n".join(blocks)
+
+
 def pokeapi_name(display: str) -> str:
     """Resolve the PokeAPI ``/pokemon/{name}`` form for a display name."""
     slug = image_slug(display)

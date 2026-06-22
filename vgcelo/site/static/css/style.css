@@ -220,6 +220,15 @@ footer { padding: 40px 0; color: var(--ink-soft); font-size: .85rem; border-top:
 .filter-bar input { padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px;
   font: inherit; margin-left: 8px; }
 
+/* ---- "Open in PokePaste" button ----------------------------------------- */
+.pp-form { margin: 0 0 12px; }
+.pp-link {
+  background: #fff; border: 1px solid var(--line); color: var(--master-purple);
+  font: inherit; font-size: .8rem; font-weight: 700; padding: 5px 12px;
+  border-radius: 999px; cursor: pointer; transition: background .12s, border-color .12s;
+}
+.pp-link:hover { background: #f3f0fb; border-color: var(--master-purple-light); }
+
 /* ---- "On this page" side menu ------------------------------------------- */
 .page-main { min-width: 0; }                 /* allow grid child to shrink */
 .wrap.has-toc {

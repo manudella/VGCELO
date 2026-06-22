@@ -129,11 +129,20 @@
     </div>
 
     {% if th.team %}
-    <div class="team-row" style="margin:12px 0">
+    <div class="team-row" style="margin:12px 0 8px">
       {% for mon in th.team %}
         <a href="{{ url('pokemon/' ~ mon.slug ~ '.html') }}">{{ m.poke_img(mon.image, mon.species, 'sm') }}</a>
       {% endfor %}
     </div>
+    {% if th.pokepaste %}
+    <form class="pp-form" action="https://pokepast.es/create" method="post" target="_blank" rel="noopener">
+      <input type="hidden" name="title" value="{{ player.name }} — {{ th.tournament_name }}">
+      <input type="hidden" name="author" value="{{ player.name }}">
+      <input type="hidden" name="notes" value="{{ th.tournament_name }} · via VGC Elo">
+      <textarea name="paste" hidden>{{ th.pokepaste }}</textarea>
+      <button type="submit" class="pp-link" title="Open this team in PokePaste (no EV spreads — not in the source data)">📋 Open team in PokePaste ↗</button>
+    </form>
+    {% endif %}
     {% endif %}
 
     <div class="scroll-x">
